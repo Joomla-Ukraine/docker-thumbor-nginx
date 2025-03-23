@@ -1,0 +1,68 @@
+services:
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./images/nginx:/etc/nginx/conf.d
+      - ./data/logs:/var/log/nginx/
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+      - ./cache/nginx:/var/cache/nginx/thumbor_cache
+    environment:
+      - TZ=Europe/Kyiv
+
+  thumbor:
+    image: ghcr.io/minimalcompact/thumbor
+    environment:
+      - VIRTUAL_HOST=${VIRTUAL_HOST}
+      - SECURITY_KEY=${SECURITY_KEY}
+      - ALLOW_UNSAFE_URL=False
+      - ALLOW_OLD_URLS=False
+      - CORS_ALLOW_ORIGIN=*
+      - AUTO_WEBP=True
+      - RESULT_STORAGE=thumbor.result_storages.no_storage
+      - STORAGE=thumbor.storages.mixed_storage
+      - MIXED_STORAGE_DETECTOR_STORAGE=tc_redis.storages.redis_storage
+      - DETECTORS=['thumbor.detectors.face_detector','thumbor.detectors.profile_detector','thumbor.detectors.glasses_detector','thumbor.detectors.feature_detector']
+      - REDIS_STORAGE_SERVER_HOST=redis
+      - REDIS_STORAGE_SERVER_PORT=6379
+      - REDIS_STORAGE_SERVER_DB=0
+      - REDIS_QUEUE_SERVER_HOST=redis
+      - REDIS_QUEUE_SERVER_PORT=6379
+      - REDIS_QUEUE_SERVER_DB=0
+    ports:
+      - "8888:8888"
+    links:
+      - redis:redis
+    restart: always
+
+  remotecv:
+    image: ghcr.io/minimalcompact/remotecv
+    environment:
+      - REMOTECV_REDIS_HOST=redis
+      - REMOTECV_REDIS_PORT=6379
+      - REMOTECV_REDIS_DATABASE=0
+      - REMOTECV_LOADER=remotecv.http_loader
+    deploy:
+      replicas: 1
+    links:
+      - redis:redis
+    restart: always
+
+  redis:
+    image: redis:latest
+    deploy:
+      replicas: 1
+    restart: always
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    environment:
+      - TZ=Europe/Kyiv
+    profiles:
+      - certbot

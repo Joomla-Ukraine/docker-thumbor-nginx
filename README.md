@@ -1,0 +1,1 @@
+# docker-thumbor-nginx

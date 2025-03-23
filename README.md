@@ -1,1 +1,3 @@
-# docker-thumbor-nginx
+# Налаштування Thumbor на базі Docker з NGINX проксюванням
+
+
